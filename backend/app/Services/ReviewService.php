@@ -44,7 +44,10 @@ class ReviewService
 
     public function createForProduct(Product $product, array $data): Review
     {
-        $review = $product->reviews()->create($data);
+        $review = Review::create(array_merge($data, [
+            'product_id'  => $product->id,
+            'is_approved' => false,
+        ]));
         CacheService::bustReviews();
         return $review;
     }

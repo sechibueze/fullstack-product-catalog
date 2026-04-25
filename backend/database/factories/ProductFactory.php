@@ -21,12 +21,10 @@ class ProductFactory extends Factory
      */
     public function definition(): array
     {
-        $name = $this->faker->unique()->words(3, true);
 
         return [
             'category_id'  => Category::factory(),
-            'name'         => ucwords($name),
-            'slug'         => Str::slug($name),
+            'name'         => $this->faker->unique()->words(3, true),
             'description'  => $this->faker->paragraphs(2, true),
             'price'        => $this->faker->randomFloat(2, 5, 500),
             'stock_qty'    => $this->faker->numberBetween(1, 200),

@@ -48,9 +48,7 @@ class ReviewController extends Controller
     // POST /api/v1/products/{product}/reviews — public endpoint
     public function store(StoreReviewRequest $request, string $product): JsonResponse
     {
-        $productModel = Product::where('slug', $product)
-            ->orWhere('id', $product)
-            ->firstOrFail();
+        $productModel = Product::where('slug', $product)->firstOrFail();
 
         $review = $this->reviewService->createForProduct(
             $productModel,
