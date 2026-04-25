@@ -10,37 +10,54 @@ class ProductService
 {
     public function list(array $filters = [], int $perPage = 12): LengthAwarePaginator
     {
-        $query = Product::with('category')
-            ->withCount('reviews');
+        $page = request()->query('page', 1);
+        $key  = CacheService::productListKey(
+            $page,
+            $perPage,
+            $filters['category']       ?? null,
+            $filters['search']         ?? null,
+            $filters['published_only'] ?? true
+        );
 
-        // Filter by category slug
-        if (!empty($filters['category'])) {
-            $query->whereHas('category', function ($q) use ($filters) {
-                $q->where('slug', $filters['category']);
-            });
-        }
+        return CacheService::products()->remember(
+            $key,
+            CacheService::TTL_PRODUCTS,
+            function () use ($filters, $perPage) {
+                $query = Product::with('category')->withCount('reviews');
 
-        // Filter published only for public access
-        if (isset($filters['published_only']) && $filters['published_only']) {
-            $query->published();
-        }
+                if (!empty($filters['category'])) {
+                    $query->whereHas('category', fn($q) =>
+                        $q->where('slug', $filters['category'])
+                    );
+                }
 
-        // Search by name
-        if (!empty($filters['search'])) {
-            $query->where('name', 'ilike', "%{$filters['search']}%");
-        }
+                if (isset($filters['published_only']) && $filters['published_only']) {
+                    $query->published();
+                }
 
-        return $query->orderBy('created_at', 'desc')->paginate($perPage);
+                if (!empty($filters['search'])) {
+                    $query->where('name', 'ilike', '%' . $filters['search'] . '%');
+                }
+
+                return $query->orderBy('created_at', 'desc')->paginate($perPage);
+            }
+        );
     }
 
     public function findBySlug(string $slug): Product
     {
-        return Product::with([
-            'category',
-            'reviews' => fn($q) => $q->approved()->orderBy('created_at', 'desc'),
-        ])
-        ->where('slug', $slug)
-        ->firstOrFail();
+        $key = CacheService::productDetailKey($slug);
+
+        return CacheService::products()->remember(
+            $key,
+            CacheService::TTL_PRODUCTS,
+            fn() => Product::with([
+                'category',
+                'reviews' => fn($q) => $q->approved()->orderBy('created_at', 'desc'),
+            ])
+            ->where('slug', $slug)
+            ->firstOrFail()
+        );
     }
 
     public function findById(string $id): Product
@@ -51,7 +68,11 @@ class ProductService
     public function create(array $data): Product
     {
         $data['slug'] = $data['slug'] ?? Str::slug($data['name']);
-        return Product::create($data);
+        $product      = Product::create($data);
+
+        CacheService::bustProducts();
+
+        return $product;
     }
 
     public function update(Product $product, array $data): Product
@@ -59,12 +80,17 @@ class ProductService
         if (isset($data['name']) && !isset($data['slug'])) {
             $data['slug'] = Str::slug($data['name']);
         }
+
         $product->update($data);
+
+        CacheService::bustProducts();
+
         return $product->fresh(['category']);
     }
 
     public function delete(Product $product): void
     {
         $product->delete();
+        CacheService::bustProducts();
     }
 }

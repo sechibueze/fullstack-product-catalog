@@ -62,5 +62,15 @@ class Product extends Model
     {
         return $this->hasMany(Review::class);
     }
+    // Scopes for filtering
+    public function scopePublished($query)
+    {
+        return $query->where('is_published', true);
+    }
+
+    public function scopeByCategory($query, string $categoryId)
+    {
+        return $query->where('category_id', $categoryId);
+    }
 
 }
