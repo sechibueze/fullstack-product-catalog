@@ -9,7 +9,17 @@ const API_URL = process.env.API_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL;
 
 // Transformers
 
-function transformMeta(meta: RawPaginationMeta) {
+function transformMeta(meta: RawPaginationMeta | undefined) {
+  if (!meta) {
+    return {
+      currentPage: 1,
+      lastPage: 1,
+      perPage: 15,
+      total: 0,
+      from: null,
+      to: null,
+    };
+  }
   return {
     currentPage: meta.current_page,
     lastPage: meta.last_page,
