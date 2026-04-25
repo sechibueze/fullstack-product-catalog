@@ -45,5 +45,11 @@ class Review extends Model
         return $this->belongsTo(Product::class);
     }
 
+    // Scopes for filtering
+    public function scopeApproved($query)
+    {
+        return $query->where('is_approved', true);
+    }
+
 
 }
