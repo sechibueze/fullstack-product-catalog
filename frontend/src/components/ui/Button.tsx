@@ -1,10 +1,12 @@
 import { cn } from '@/lib/utils';
 import { ButtonHTMLAttributes, forwardRef } from 'react';
+import { Slot } from '@radix-ui/react-slot';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'danger' | 'ghost' | 'outline';
   size?: 'sm' | 'md' | 'lg';
   loading?: boolean;
+  asChild?: boolean;
 }
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
@@ -14,6 +16,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       size = 'md',
       loading = false,
       disabled,
+      asChild = false,
       className,
       children,
       ...props
@@ -47,9 +50,10 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       md: 'px-4 py-2 text-sm',
       lg: 'px-6 py-3 text-base',
     };
+    const Comp = asChild ? Slot : 'button';
 
     return (
-      <button
+      <Comp
         ref={ref}
         disabled={disabled || loading}
         aria-busy={loading}
@@ -80,7 +84,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
           </svg>
         )}
         {children}
-      </button>
+      </Comp>
     );
   },
 );
