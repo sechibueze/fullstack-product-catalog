@@ -1,4 +1,4 @@
-import axios, { AxiosError, AxiosInstance, AxiosResponse } from 'axios';
+import axios, { AxiosError, AxiosInstance } from 'axios';
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
@@ -9,23 +9,23 @@ export const apiClient: AxiosInstance = axios.create({
     'Content-Type': 'application/json',
     Accept: 'application/json',
   },
-  withCredentials: true,
+  withCredentials: false,
 });
 
-// Request interceptor to attach token if present
+//  Request interceptor to attach token if present
 apiClient.interceptors.request.use((config) => {
   if (typeof window !== 'undefined') {
     const token = localStorage.getItem('auth_token');
     if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+      config.headers.set('Authorization', `Bearer ${token}`);
     }
   }
   return config;
 });
 
-// Response interceptor to handle auth errors
+//  Response interceptor to handle auth errors
 apiClient.interceptors.response.use(
-  (response: AxiosResponse) => response,
+  (response) => response,
   (error: AxiosError) => {
     if (error.response?.status === 401) {
       if (typeof window !== 'undefined') {
@@ -37,7 +37,7 @@ apiClient.interceptors.response.use(
   },
 );
 
-// API error shape
+//  API error shape
 export interface ApiError {
   message: string;
   errors: Record<string, string[]>;
