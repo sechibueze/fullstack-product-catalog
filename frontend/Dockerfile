@@ -1,9 +1,7 @@
-# Base stage
 FROM node:20-alpine AS base
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-# Development stage
 FROM base AS development
 COPY package*.json ./
 RUN npm install
@@ -13,16 +11,20 @@ ENV NODE_ENV=development
 ENV NEXT_TELEMETRY_DISABLED=1
 CMD ["npm", "run", "dev"]
 
-# Builder stage
 FROM base AS builder
 COPY package*.json ./
 RUN npm ci
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
+ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_APP_URL
+ARG NEXT_PUBLIC_APP_NAME
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
+ENV NEXT_PUBLIC_APP_NAME=$NEXT_PUBLIC_APP_NAME
 RUN npm run build
 
-# Production stage
 FROM base AS production
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
