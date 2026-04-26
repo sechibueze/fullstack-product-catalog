@@ -2,6 +2,7 @@ import type { NextConfig } from 'next';
 import path from 'path';
 
 const nextConfig: NextConfig = {
+  output: 'standalone',
   // Silence any monorepo root detection warning
   outputFileTracingRoot: path.join(__dirname, '../'),
 
