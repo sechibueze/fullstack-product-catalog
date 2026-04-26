@@ -11,7 +11,6 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 
 class AuthController extends Controller
 {
-    // POST /api/v1/auth/login
     public function login(Request $request): JsonResponse
     {
         $request->validate([
@@ -42,7 +41,6 @@ class AuthController extends Controller
         ]);
     }
 
-    // POST /api/v1/auth/logout
     public function logout(Request $request): JsonResponse
     {
         $request->user()->currentAccessToken()->delete();
@@ -53,7 +51,6 @@ class AuthController extends Controller
         ]);
     }
 
-    // GET /api/v1/auth/me
     public function me(Request $request): JsonResponse
     {
         return response()->json([

@@ -14,11 +14,10 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 
 class ReviewController extends Controller
 {
-     public function __construct(
+    public function __construct(
         private readonly ReviewService $reviewService
     ) {}
 
-    // GET /api/v1/reviews
     public function index(Request $request): ReviewCollection
     {
         $filters = [
@@ -34,7 +33,6 @@ class ReviewController extends Controller
         return new ReviewCollection($reviews);
     }
 
-    // GET /api/v1/reviews/{review}
     public function show(string $review): JsonResponse
     {
         $model = $this->reviewService->findById($review);
@@ -45,7 +43,6 @@ class ReviewController extends Controller
         ]);
     }
 
-    // POST /api/v1/products/{product}/reviews — public endpoint
     public function store(StoreReviewRequest $request, string $product): JsonResponse
     {
         $productModel = Product::where('slug', $product)->firstOrFail();
@@ -61,7 +58,6 @@ class ReviewController extends Controller
         ], 201);
     }
 
-    // PUT/PATCH /api/v1/reviews/{review}
     public function update(UpdateReviewRequest $request, string $review): JsonResponse
     {
         $model   = $this->reviewService->findById($review);
@@ -73,7 +69,6 @@ class ReviewController extends Controller
         ]);
     }
 
-    // DELETE /api/v1/reviews/{review}
     public function destroy(string $review): JsonResponse
     {
         $model = $this->reviewService->findById($review);
@@ -85,7 +80,6 @@ class ReviewController extends Controller
         ]);
     }
 
-    // PATCH /api/v1/reviews/{review}/approve
     public function approve(string $review): JsonResponse
     {
         $model   = $this->reviewService->findById($review);
@@ -97,7 +91,6 @@ class ReviewController extends Controller
         ]);
     }
 
-    // PATCH /api/v1/reviews/{review}/reject
     public function reject(string $review): JsonResponse
     {
         $model   = $this->reviewService->findById($review);

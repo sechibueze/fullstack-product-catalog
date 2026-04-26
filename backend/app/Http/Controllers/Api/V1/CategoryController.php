@@ -9,7 +9,6 @@ use App\Http\Resources\CategoryCollection;
 use App\Http\Resources\CategoryResource;
 use App\Services\CategoryService;
 use Illuminate\Http\Request;
-use Illuminate\Http\Resources\Json\JsonResource;
 use Symfony\Component\HttpFoundation\JsonResponse;
 
 class CategoryController extends Controller
@@ -18,7 +17,6 @@ class CategoryController extends Controller
         private readonly CategoryService $categoryService
     ) {}
 
-    // GET /api/v1/categories
     public function index(Request $request): CategoryCollection
     {
         $perPage    = (int) $request->query('per_page', 15);
@@ -27,7 +25,6 @@ class CategoryController extends Controller
         return new CategoryCollection($categories);
     }
 
-    // GET /api/v1/categories/{category}
     public function show(string $category): JsonResponse
     {
         $model = $this->categoryService->findBySlug($category);
@@ -38,7 +35,6 @@ class CategoryController extends Controller
         ]);
     }
 
-    // POST /api/v1/categories
     public function store(StoreCategoryRequest $request): JsonResponse
     {
         $category = $this->categoryService->create($request->validated());
@@ -49,7 +45,6 @@ class CategoryController extends Controller
         ], 201);
     }
 
-    // PUT/PATCH /api/v1/categories/{category}
     public function update(UpdateCategoryRequest $request, string $category): JsonResponse
     {
         $model   = $this->categoryService->findById($category);
@@ -61,7 +56,6 @@ class CategoryController extends Controller
         ]);
     }
 
-    // DELETE /api/v1/categories/{category}
     public function destroy(string $category): JsonResponse
     {
         $model = $this->categoryService->findById($category);

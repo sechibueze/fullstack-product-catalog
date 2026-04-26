@@ -17,7 +17,6 @@ class ProductController extends Controller
         private readonly ProductService $productService
     ) {}
 
-    // GET /api/v1/products
     public function index(Request $request): ProductCollection
     {
         $filters = [
@@ -32,7 +31,6 @@ class ProductController extends Controller
         return new ProductCollection($products);
     }
 
-    // GET /api/v1/products/{product}
     public function show(string $product): JsonResponse
     {
         $model = $this->productService->findBySlug($product);
@@ -43,7 +41,6 @@ class ProductController extends Controller
         ]);
     }
 
-    // POST /api/v1/products
     public function store(StoreProductRequest $request): JsonResponse
     {
         $product = $this->productService->create($request->validated());
@@ -54,7 +51,6 @@ class ProductController extends Controller
         ], 201);
     }
 
-    // PUT/PATCH /api/v1/products/{product}
     public function update(UpdateProductRequest $request, string $product): JsonResponse
     {
         $model   = $this->productService->findById($product);
@@ -66,7 +62,6 @@ class ProductController extends Controller
         ]);
     }
 
-    // DELETE /api/v1/products/{product}
     public function destroy(string $product): JsonResponse
     {
         $model = $this->productService->findById($product);
