@@ -39,6 +39,8 @@ services:
       target: production
     container_name: wfd_backend
     restart: unless-stopped
+    ports:
+      - '8000:80'
     env_file:
       - ./backend/.env
     depends_on:
@@ -46,19 +48,6 @@ services:
         condition: service_healthy
       cache:
         condition: service_healthy
-    networks:
-      - app_network
-
-  nginx:
-    image: nginx:1.25
-    container_name: wfd_nginx
-    restart: unless-stopped
-    ports:
-      - '8000:80'
-    volumes:
-      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
-    depends_on:
-      - backend
     networks:
       - app_network
 
@@ -76,8 +65,10 @@ services:
     ports:
       - '3000:3000'
     environment:
-      - API_INTERNAL_URL=http://nginx/api/v1
+      - API_INTERNAL_URL=http://backend/api/v1
       - PORT=3000
+    depends_on:
+      - backend
     networks:
       - app_network
 
