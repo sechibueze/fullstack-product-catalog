@@ -28,6 +28,7 @@ import { formatPrice } from '@/lib/utils';
 import { getApiError } from '@/lib/api';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { useQueryClient } from '@tanstack/react-query';
 
 export default function AdminProductsPage() {
   const [page, setPage] = useState(1);
