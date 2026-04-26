@@ -11,7 +11,7 @@ export interface CreateProductPayload {
   slug?: string;
 }
 
-export interface UpdateProductPayload extends Partial<CreateProductPayload> {}
+export type UpdateProductPayload = Partial<CreateProductPayload>;
 
 export const adminProductsService = {
   async list(params: Record<string, string> = {}) {

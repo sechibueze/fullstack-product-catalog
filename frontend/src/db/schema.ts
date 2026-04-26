@@ -66,9 +66,8 @@ export type NewReview = InferInsertModel<typeof reviews>;
 //  Extended API response types
 // These extend the base Drizzle types to include nested relations
 // returned by the backend API
-
 export type ProductWithCategory = Product & {
-  category: Category;
+  category?: CategoryWithCount;
   reviews?: ReviewCollection;
   reviewsCount?: number;
   approvedReviewsCount?: number;

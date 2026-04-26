@@ -10,6 +10,7 @@ import { ErrorBoundary } from '@/components/errors/ErrorBoundary';
 import { Badge } from '@/components/ui/Badge';
 import { ArrowLeft, Package, Tag } from 'lucide-react';
 import Link from 'next/link';
+import { BreadcrumbJsonLd } from '@/components/seo/BreadcrumbJsonLd';
 
 //  pre-renders all category slugs at build time
 export async function generateStaticParams() {
@@ -133,6 +134,13 @@ export default async function CategoryDetailPage({
 
   return (
     <div className='py-8 md:py-12'>
+      <BreadcrumbJsonLd
+        items={[
+          { name: 'Home', href: '/' },
+          { name: 'Categories', href: '/categories' },
+          { name: category.name, href: `/categories/${category.slug}` },
+        ]}
+      />
       <div className='container-app'>
         {/* Breadcrumb */}
         <nav aria-label='Breadcrumb' className='mb-6'>

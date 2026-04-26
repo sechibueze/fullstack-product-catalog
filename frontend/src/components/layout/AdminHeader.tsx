@@ -4,7 +4,6 @@ import { useTheme } from '@/providers/ThemeProvider';
 import { Sun, Moon, LogOut, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
-import { apiClient } from '@/lib/api';
 import { toast } from 'sonner';
 
 export function AdminHeader() {

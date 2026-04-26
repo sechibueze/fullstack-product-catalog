@@ -6,7 +6,7 @@ import {
   UpdateProductPayload,
 } from '@/services/admin/products';
 import { adminCategoriesService } from '@/services/admin/categories';
-import { RawProduct } from '@/types/api';
+import { RawProduct, RawPaginatedResponse } from '@/types/api';
 
 export const PRODUCTS_KEY = ['admin', 'products'] as const;
 export const CATEGORIES_KEY = ['admin', 'categories'] as const;
@@ -37,26 +37,32 @@ function updateProductInCache(
   updater: (product: RawProduct) => RawProduct,
 ) {
   // Get all cached queries that start with PRODUCTS_KEY
-  queryClient.setQueriesData({ queryKey: PRODUCTS_KEY }, (old: any) => {
-    if (!old?.data) return old;
-    return {
-      ...old,
-      data: old.data.map((p: RawProduct) => (p.id === id ? updater(p) : p)),
-    };
-  });
+  queryClient.setQueriesData<RawPaginatedResponse<RawProduct>>(
+    { queryKey: PRODUCTS_KEY },
+    (old) => {
+      if (!old) return old;
+      return {
+        ...old,
+        data: old.data.map((p: RawProduct) => (p.id === id ? updater(p) : p)),
+      };
+    },
+  );
 }
 
 function removeProductFromCache(
   queryClient: ReturnType<typeof useQueryClient>,
   id: string,
 ) {
-  queryClient.setQueriesData({ queryKey: PRODUCTS_KEY }, (old: any) => {
-    if (!old?.data) return old;
-    return {
-      ...old,
-      data: old.data.filter((p: RawProduct) => p.id !== id),
-    };
-  });
+  queryClient.setQueriesData<RawPaginatedResponse<RawProduct>>(
+    { queryKey: PRODUCTS_KEY },
+    (old) => {
+      if (!old) return old;
+      return {
+        ...old,
+        data: old.data.filter((p: RawProduct) => p.id !== id),
+      };
+    },
+  );
 }
 
 //  Mutations
@@ -67,7 +73,7 @@ export function useCreateProduct() {
   return useMutation({
     mutationFn: (payload: CreateProductPayload) =>
       adminProductsService.create(payload),
-    onSuccess: (response) => {
+    onSuccess: () => {
       // Invalidate all product queries so the new product appears
       queryClient.invalidateQueries({ queryKey: PRODUCTS_KEY });
       toast.success('Product created successfully.');
