@@ -28,44 +28,70 @@ export function useAdminCategories() {
   });
 }
 
-//  Helpers
+// Cache helpers
 
-// Updates a single product in all cached product queries
-function updateProductInCache(
+function getAllProductCacheEntries(
+  queryClient: ReturnType<typeof useQueryClient>,
+): Array<{ key: readonly unknown[]; data: RawPaginatedResponse<RawProduct> }> {
+  return queryClient
+    .getQueriesData<RawPaginatedResponse<RawProduct>>({
+      queryKey: PRODUCTS_KEY,
+    })
+    .filter(
+      (
+        entry,
+      ): entry is [readonly unknown[], RawPaginatedResponse<RawProduct>] =>
+        entry[1] !== undefined,
+    )
+    .map(([key, data]) => ({ key, data }));
+}
+
+function updateProductInAllCaches(
   queryClient: ReturnType<typeof useQueryClient>,
   id: string,
   updater: (product: RawProduct) => RawProduct,
 ) {
-  // Get all cached queries that start with PRODUCTS_KEY
-  queryClient.setQueriesData<RawPaginatedResponse<RawProduct>>(
-    { queryKey: PRODUCTS_KEY },
-    (old) => {
-      if (!old) return old;
-      return {
-        ...old,
-        data: old.data.map((p: RawProduct) => (p.id === id ? updater(p) : p)),
-      };
-    },
-  );
+  const entries = getAllProductCacheEntries(queryClient);
+  entries.forEach(({ key, data }) => {
+    queryClient.setQueryData<RawPaginatedResponse<RawProduct>>(key, {
+      ...data,
+      data: data.data.map((p) => (p.id === id ? updater(p) : p)),
+    });
+  });
 }
 
-function removeProductFromCache(
+function removeProductFromAllCaches(
   queryClient: ReturnType<typeof useQueryClient>,
   id: string,
 ) {
-  queryClient.setQueriesData<RawPaginatedResponse<RawProduct>>(
-    { queryKey: PRODUCTS_KEY },
-    (old) => {
-      if (!old) return old;
-      return {
-        ...old,
-        data: old.data.filter((p: RawProduct) => p.id !== id),
-      };
-    },
-  );
+  const entries = getAllProductCacheEntries(queryClient);
+  entries.forEach(({ key, data }) => {
+    queryClient.setQueryData<RawPaginatedResponse<RawProduct>>(key, {
+      ...data,
+      data: data.data.filter((p) => p.id !== id),
+    });
+  });
 }
 
-//  Mutations
+function snapshotAllProductCaches(
+  queryClient: ReturnType<typeof useQueryClient>,
+): Array<{ key: readonly unknown[]; data: RawPaginatedResponse<RawProduct> }> {
+  return getAllProductCacheEntries(queryClient);
+}
+
+function restoreProductCaches(
+  queryClient: ReturnType<typeof useQueryClient>,
+  snapshot: Array<{
+    key: readonly unknown[];
+    data: RawPaginatedResponse<RawProduct>;
+  }>,
+) {
+  snapshot.forEach(({ key, data }) => {
+    queryClient.setQueryData(key, data);
+  });
+}
+
+// Mutations
 
 export function useCreateProduct() {
   const queryClient = useQueryClient();
@@ -74,7 +100,6 @@ export function useCreateProduct() {
     mutationFn: (payload: CreateProductPayload) =>
       adminProductsService.create(payload),
     onSuccess: () => {
-      // Invalidate all product queries so the new product appears
       queryClient.invalidateQueries({ queryKey: PRODUCTS_KEY });
       toast.success('Product created successfully.');
     },
@@ -96,50 +121,49 @@ export function useUpdateProduct() {
       payload: UpdateProductPayload;
     }) => adminProductsService.update(id, payload),
 
-    // Optimistic update — update cache immediately before server responds
     onMutate: async ({ id, payload }) => {
-      // Cancel any outgoing refetches
       await queryClient.cancelQueries({ queryKey: PRODUCTS_KEY });
+      const snapshot = snapshotAllProductCaches(queryClient);
 
-      // Make a snapshot of previous value for rollback
-      const previousData = queryClient.getQueriesData({
-        queryKey: PRODUCTS_KEY,
-      });
-
-      // Optimistically update the cache
-      updateProductInCache(queryClient, id, (product) => ({
+      updateProductInAllCaches(queryClient, id, (product) => ({
         ...product,
-        ...payload,
-        // Keep existing values for fields not in payload
         name: payload.name ?? product.name,
         description: payload.description ?? product.description,
-        price: String(payload.price ?? product.price),
+        price:
+          payload.price !== undefined ? String(payload.price) : product.price,
         stock_qty: payload.stock_qty ?? product.stock_qty,
         is_published: payload.is_published ?? product.is_published,
         category_id: payload.category_id ?? product.category_id,
+        slug: payload.slug ?? product.slug,
       }));
 
-      return { previousData };
+      return { snapshot };
     },
 
     onError: (_err, _vars, context) => {
-      // Rollback to previous state
-      if (context?.previousData) {
-        context.previousData.forEach(([queryKey, data]) => {
-          queryClient.setQueryData(queryKey, data);
-        });
+      if (context?.snapshot) {
+        restoreProductCaches(queryClient, context.snapshot);
       }
       toast.error('Failed to update product.');
     },
 
-    onSuccess: (response, { id }) => {
-      // Update cache with real server data
-      updateProductInCache(queryClient, id, () => response.data);
+    onSuccess: (_response, { id, payload }) => {
+      // Write real server data into cache
+      updateProductInAllCaches(queryClient, id, (product) => ({
+        ...product,
+        name: payload.name ?? product.name,
+        description: payload.description ?? product.description,
+        price:
+          payload.price !== undefined ? String(payload.price) : product.price,
+        stock_qty: payload.stock_qty ?? product.stock_qty,
+        is_published: payload.is_published ?? product.is_published,
+        category_id: payload.category_id ?? product.category_id,
+        slug: payload.slug ?? product.slug,
+      }));
       toast.success('Product updated successfully.');
     },
 
     onSettled: () => {
-      // Always refetch to ensure consistency
       queryClient.invalidateQueries({ queryKey: PRODUCTS_KEY });
     },
   });
@@ -151,20 +175,16 @@ export function useDeleteProduct() {
   return useMutation({
     mutationFn: (id: string) => adminProductsService.delete(id),
 
-    onMutate: async (id: string) => {
+    onMutate: async (id) => {
       await queryClient.cancelQueries({ queryKey: PRODUCTS_KEY });
-      const previousData = queryClient.getQueriesData({
-        queryKey: PRODUCTS_KEY,
-      });
-      removeProductFromCache(queryClient, id);
-      return { previousData };
+      const snapshot = snapshotAllProductCaches(queryClient);
+      removeProductFromAllCaches(queryClient, id);
+      return { snapshot };
     },
 
     onError: (_err, _id, context) => {
-      if (context?.previousData) {
-        context.previousData.forEach(([queryKey, data]) => {
-          queryClient.setQueryData(queryKey, data);
-        });
+      if (context?.snapshot) {
+        restoreProductCaches(queryClient, context.snapshot);
       }
       toast.error('Failed to delete product.');
     },
@@ -188,29 +208,23 @@ export function useTogglePublished() {
 
     onMutate: async ({ id, isPublished }) => {
       await queryClient.cancelQueries({ queryKey: PRODUCTS_KEY });
-      const previousData = queryClient.getQueriesData({
-        queryKey: PRODUCTS_KEY,
-      });
-
-      updateProductInCache(queryClient, id, (product) => ({
-        ...product,
+      const snapshot = snapshotAllProductCaches(queryClient);
+      updateProductInAllCaches(queryClient, id, (p) => ({
+        ...p,
         is_published: isPublished,
       }));
-
-      return { previousData };
+      return { snapshot };
     },
 
     onError: (_err, _vars, context) => {
-      if (context?.previousData) {
-        context.previousData.forEach(([queryKey, data]) => {
-          queryClient.setQueryData(queryKey, data);
-        });
+      if (context?.snapshot) {
+        restoreProductCaches(queryClient, context.snapshot);
       }
       toast.error('Failed to update product status.');
     },
 
     onSuccess: (response, { id }) => {
-      updateProductInCache(queryClient, id, () => response.data);
+      updateProductInAllCaches(queryClient, id, () => response.data);
       toast.success('Product status updated.');
     },
 

@@ -1,36 +1,104 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Product Catalog — Frontend
 
-## Getting Started
+Next.js 15 frontend for the Product Catalog & Review Platform.
 
-First, run the development server:
+---
+
+## Stack
+
+- **Framework:** Next.js 15.5 (App Router)
+- **Language:** TypeScript (strict)
+- **Styling:** Tailwind CSS v4
+- **Data fetching:** TanStack React Query v5
+- **Forms:** React Hook Form + Zod
+- **Schema:** Drizzle ORM (type contract only)
+- **Toasts:** Sonner
+
+---
+
+## Setup
+
+### 1. Install dependencies
+
+```bash
+cd frontend
+npm install
+```
+
+### 2. Configure environment
+
+```bash
+cp .env.example .env.local
+```
+
+Update `.env.local`:
+
+```env
+NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1
+NEXT_PUBLIC_APP_NAME="Product Catalog"
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+API_INTERNAL_URL=http://localhost:8000/api/v1
+```
+
+### 3. Start development server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+App is available at `http://localhost:3000`
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 4. Build for production
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run build
+npm run start
+```
 
-## Learn More
+---
 
-To learn more about Next.js, take a look at the following resources:
+## Pages
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| Route                | Strategy         | Description                            |
+| -------------------- | ---------------- | -------------------------------------- |
+| `/`                  | SSG              | Homepage with featured products        |
+| `/products`          | SSG + ISR (60s)  | Paginated listing with category filter |
+| `/products/[slug]`   | SSG + ISR (60s)  | Product detail with reviews            |
+| `/categories`        | SSG              | All categories                         |
+| `/categories/[slug]` | SSG + ISR (300s) | Products filtered by category          |
+| `/admin/login`       | Static           | Admin login                            |
+| `/admin/products`    | CSR              | Product CRUD table                     |
+| `/admin/reviews`     | CSR              | Review moderation                      |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+---
 
-## Deploy on Vercel
+## SSG / ISR Decisions
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- **Products (60s revalidate):** Stock, price, and publish status change frequently. 60s ensures customers see updates quickly while still serving cached pages.
+- **Categories (300s revalidate):** Categories are stable. 300s reduces origin load while keeping content fresh.
+- **`generateStaticParams`:** All published product and category slugs are pre-rendered at build time for instant page loads.
+- **`notFound()`:** Called for unpublished or missing slugs so they return proper 404s rather than empty pages.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+## Design Tokens
+
+All colors, fonts, and spacing are defined as CSS variables in `src/app/globals.css` inside the `@theme {}` block. To change the brand color update a single line:
+
+```css
+@theme {
+  --color-primary: #7c3aed;
+}
+```
+
+Dark mode is toggled via `data-theme="dark"` on the `<html>` element and persisted in `localStorage`.
+
+---
+
+## Admin Panel
+
+The admin panel requires authentication. Login at `/admin/login`:
+Email: admin@example.com
+Password: password
+
+Tokens are stored in `localStorage` and sent as `Bearer` tokens on every API request via the axios interceptor.
