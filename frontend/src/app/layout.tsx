@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google';
 import { Toaster } from 'sonner';
 import { QueryProvider } from '@/providers/QueryProvider';
 import { ThemeProvider } from '@/providers/ThemeProvider';
+import { AuthProvider } from '@/providers/AuthProvider';
 import './globals.css';
 
 const inter = Inter({
@@ -27,19 +28,21 @@ export default function RootLayout({
     <html lang='en' suppressHydrationWarning>
       <body className={inter.variable}>
         <ThemeProvider>
-          <QueryProvider>
-            {children}
-            <Toaster
-              position='top-right'
-              richColors
-              closeButton
-              toastOptions={{
-                style: {
-                  fontFamily: 'var(--font-sans)',
-                },
-              }}
-            />
-          </QueryProvider>
+          <AuthProvider>
+            <QueryProvider>
+              {children}
+              <Toaster
+                position='top-right'
+                richColors
+                closeButton
+                toastOptions={{
+                  style: {
+                    fontFamily: 'var(--font-sans)',
+                  },
+                }}
+              />
+            </QueryProvider>
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>
