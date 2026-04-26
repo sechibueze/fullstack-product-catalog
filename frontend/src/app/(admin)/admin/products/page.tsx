@@ -40,7 +40,7 @@ export default function AdminProductsPage() {
   const params = { page: String(page), per_page: '12' };
 
   const { data, isLoading, isError } = useAdminProducts(params);
-  const { data: cats, isLoading: catsLoading } = useAdminCategories();
+  const { data: cats } = useAdminCategories();
   const createProduct = useCreateProduct();
   const updateProduct = useUpdateProduct();
   const deleteProduct = useDeleteProduct();
@@ -211,7 +211,8 @@ export default function AdminProductsPage() {
 
                   {/* Category */}
                   <td className='px-4 py-3 text-text-secondary whitespace-nowrap'>
-                    {(product as any).category?.name ?? '—'}
+                    {' '}
+                    {product.category?.name ?? '—'}
                   </td>
 
                   {/* Price */}
@@ -303,9 +304,10 @@ export default function AdminProductsPage() {
         {meta && meta.last_page > 1 && (
           <div className='px-4 py-4 border-t border-border'>
             <Pagination
-              currentPage={meta.current_page}
+              currentPage={page}
               lastPage={meta.last_page}
               baseUrl='/admin/products'
+              onPageChange={setPage}
             />
           </div>
         )}

@@ -1,9 +1,8 @@
 'use client';
-
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { X, Loader2 } from 'lucide-react';
+import { X } from 'lucide-react';
 import { productSchema, ProductFormData } from '@/lib/validations/product';
 import { RawProduct, RawCategory } from '@/types/api';
 import { Button } from '@/components/ui/Button';
@@ -221,7 +220,7 @@ export function ProductFormModal({
                 type='number'
                 step='0.01'
                 min='0'
-                {...register('price')}
+                {...register('price', { valueAsNumber: true })}
                 aria-invalid={!!errors.price}
                 placeholder='0.00'
                 className={inputClass(!!errors.price)}
@@ -246,7 +245,7 @@ export function ProductFormModal({
                 id='stock_qty'
                 type='number'
                 min='0'
-                {...register('stock_qty')}
+                {...register('stock_qty', { valueAsNumber: true })}
                 aria-invalid={!!errors.stock_qty}
                 placeholder='0'
                 className={inputClass(!!errors.stock_qty)}

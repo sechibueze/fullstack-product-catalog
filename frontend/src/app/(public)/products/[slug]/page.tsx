@@ -8,7 +8,8 @@ import { ErrorBoundary } from '@/components/errors/ErrorBoundary';
 import { ReviewsList } from '@/components/reviews/ReviewsList';
 import { ReviewForm } from '@/components/reviews/ReviewForm';
 import { ReviewsListSkeleton } from '@/components/ui/Skeleton';
-import { formatPrice, formatDate } from '@/lib/utils';
+import { formatPrice } from '@/lib/utils';
+import { BreadcrumbJsonLd } from '@/components/seo/BreadcrumbJsonLd';
 import {
   Package,
   Tag,
@@ -119,7 +120,14 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
           }),
         }}
       />
-
+      {/* Breadcrumb structured data */}
+      <BreadcrumbJsonLd
+        items={[
+          { name: 'Home', href: '/' },
+          { name: 'Products', href: '/products' },
+          { name: product.name, href: `/products/${product.slug}` },
+        ]}
+      />
       <div className='py-8 md:py-12'>
         <div className='container-app'>
           {/*  Breadcrumb  */}

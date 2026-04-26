@@ -6,7 +6,7 @@ import {
   useState,
   useCallback,
 } from 'react';
-import { apiClient, getApiError } from '@/lib/api';
+import { apiClient } from '@/lib/api';
 
 interface AuthUser {
   id: string;
