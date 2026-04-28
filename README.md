@@ -114,32 +114,6 @@ docker compose exec backend php artisan test
 
 ---
 
-## Production Deployment
-
-### Oracle Cloud — first-time setup (one command)
-
-SSH into your VM and run:
-
-```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/sechibueze/fullstack-product-catalog/main/scripts/server-setup.sh)
-```
-
-This installs Docker, clones the repo, generates all credentials, starts the full stack, and seeds the database automatically. Open **TCP 8000** and **TCP 3000** in your Oracle Cloud Security List.
-
-### Auto-deploy on push to main
-
-Add three secrets in GitHub (Settings → Secrets → Actions):
-
-| Secret           | Value                |
-| ---------------- | -------------------- |
-| `SERVER_HOST`    | Oracle VM public IP  |
-| `SERVER_USER`    | `ubuntu`             |
-| `SERVER_SSH_KEY` | Your SSH private key |
-
-Every push to `main` triggers a deploy with zero manual steps.
-
----
-
 ## API Reference
 
 **Base URL:** `http://localhost:8000/api/v1`
