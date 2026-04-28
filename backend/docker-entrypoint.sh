@@ -25,6 +25,9 @@ if [ "$USER_COUNT" = "0" ]; then
 fi
 
 php artisan config:cache
+
+mkdir -p storage/api-docs
+chown -R www-data:www-data storage
 php artisan l5-swagger:generate || true
 
 exec "$@"

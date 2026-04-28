@@ -1,96 +1,133 @@
-name: Deploy
+name: Build and Deploy
 
 on:
   push:
     branches: [main]
 
 jobs:
-  deploy:
+  build:
+    name: Build and push Docker images
     runs-on: ubuntu-latest
-
     steps:
-      - name: Deploy to Oracle Cloud
+      - uses: actions/checkout@v4
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push backend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file:    ./backend/Dockerfile
+          target:  production
+          push:    true
+          tags:    sechibueze/wfd-backend:latest
+          cache-from: type=gha
+          cache-to:   type=gha,mode=max
+
+      - name: Build and push frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          file:    ./frontend/Dockerfile
+          target:  production
+          push:    true
+          tags:    sechibueze/wfd-frontend:latest
+          cache-from: type=gha
+          cache-to:   type=gha,mode=max
+          build-args: |
+            NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}
+            NEXT_PUBLIC_APP_URL=${{ secrets.NEXT_PUBLIC_APP_URL }}
+            NEXT_PUBLIC_APP_NAME=Product Catalog
+
+  deploy:
+    name: Deploy to EC2
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Copy compose file to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host:     ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key:      ${{ secrets.EC2_SSH_KEY }}
+          port:     ${{ secrets.EC2_PORT }}
+          source:   docker-compose.prod.yml
+          target:   /home/ubuntu/fullstack-product-catalog/
+
+      - name: Write env files and deploy
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
+          host:     ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key:      ${{ secrets.EC2_SSH_KEY }}
+          port:     ${{ secrets.EC2_PORT }}
+          envs:     APP_KEY,DB_PASSWORD,NEXT_PUBLIC_API_URL,NEXT_PUBLIC_APP_URL,EC2_HOST
           script: |
             set -e
+            APP_DIR=/home/ubuntu/fullstack-product-catalog
+            mkdir -p "$APP_DIR/backend"
 
-            APP_DIR="/opt/product-catalog"
-            REPO="https://github.com/sechibueze/fullstack-product-catalog.git"
+            # Root .env
+            cat > "$APP_DIR/.env" <<EOF
+            DB_DATABASE=product_catalog
+            DB_USERNAME=wfd
+            DB_PASSWORD=${DB_PASSWORD}
+            NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+            NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
+            NEXT_PUBLIC_APP_NAME=Product Catalog
+            EOF
 
-            # Install Docker if not present (Oracle Linux uses dnf, not apt)
-            if ! command -v docker &>/dev/null; then
-              sudo dnf install -y dnf-plugins-core make git
-              sudo dnf config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
-              sudo dnf install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
-              sudo systemctl enable --now docker
-              sudo usermod -aG docker "$USER"
-            fi
-
-            # Install make if not present
-            if ! command -v make &>/dev/null; then
-              sudo dnf install -y make
-            fi
-
-            # Clone repo on first run
-            if [ ! -d "$APP_DIR" ]; then
-              sudo mkdir -p "$APP_DIR"
-              sudo chown "$USER:$USER" "$APP_DIR"
-              git clone "$REPO" "$APP_DIR"
-            fi
+            # Backend .env
+            cat > "$APP_DIR/backend/.env" <<EOF
+            APP_NAME=Product Catalog
+            APP_ENV=production
+            APP_KEY=${APP_KEY}
+            APP_DEBUG=false
+            APP_URL=http://${EC2_HOST}:8000
+            APP_TIMEZONE=UTC
+            DB_CONNECTION=pgsql
+            DB_HOST=db
+            DB_PORT=5432
+            DB_DATABASE=product_catalog
+            DB_USERNAME=wfd
+            DB_PASSWORD=${DB_PASSWORD}
+            CACHE_STORE=redis
+            CACHE_PREFIX=wfd_
+            REDIS_CLIENT=phpredis
+            REDIS_HOST=cache
+            REDIS_PORT=6379
+            REDIS_PASSWORD=null
+            QUEUE_CONNECTION=sync
+            SESSION_DRIVER=cookie
+            SESSION_LIFETIME=120
+            FRONTEND_URL=${NEXT_PUBLIC_APP_URL}
+            SANCTUM_STATEFUL_DOMAINS=${EC2_HOST}:3000
+            FILESYSTEM_DISK=local
+            BROADCAST_CONNECTION=log
+            LOG_CHANNEL=stack
+            LOG_LEVEL=error
+            L5_SWAGGER_GENERATE_ALWAYS=false
+            L5_SWAGGER_CONST_HOST=http://${EC2_HOST}:8000/api
+            EOF
 
             cd "$APP_DIR"
-            git pull origin main
-
-            # Generate credentials on first run only
-            if [ ! -f "backend/.env" ]; then
-              SERVER_IP=$(curl -s ifconfig.me)
-              DB_PASS=$(openssl rand -hex 16)
-              APP_KEY=$(openssl rand -base64 32)
-
-              echo "SERVER_IP=$SERVER_IP"                                 > .env
-              echo "NEXT_PUBLIC_APP_URL=http://$SERVER_IP:3000"          >> .env
-              echo "NEXT_PUBLIC_API_URL=http://$SERVER_IP:8000/api/v1"   >> .env
-              echo "NEXT_PUBLIC_APP_NAME=Product Catalog"                >> .env
-              echo "DB_DATABASE=product_catalog"                         >> .env
-              echo "DB_USERNAME=wfd"                                     >> .env
-              echo "DB_PASSWORD=$DB_PASS"                                >> .env
-
-              echo "APP_NAME=ProductCatalog"                             > backend/.env
-              echo "APP_ENV=production"                                  >> backend/.env
-              echo "APP_KEY=base64:$APP_KEY"                            >> backend/.env
-              echo "APP_DEBUG=false"                                     >> backend/.env
-              echo "APP_URL=http://$SERVER_IP:8000"                     >> backend/.env
-              echo "DB_CONNECTION=pgsql"                                 >> backend/.env
-              echo "DB_HOST=db"                                          >> backend/.env
-              echo "DB_PORT=5432"                                        >> backend/.env
-              echo "DB_DATABASE=product_catalog"                         >> backend/.env
-              echo "DB_USERNAME=wfd"                                     >> backend/.env
-              echo "DB_PASSWORD=$DB_PASS"                                >> backend/.env
-              echo "CACHE_STORE=redis"                                   >> backend/.env
-              echo "REDIS_CLIENT=phpredis"                               >> backend/.env
-              echo "REDIS_HOST=cache"                                    >> backend/.env
-              echo "REDIS_PORT=6379"                                     >> backend/.env
-              echo "REDIS_PASSWORD=null"                                 >> backend/.env
-              echo "L5_SWAGGER_GENERATE_ALWAYS=false"                   >> backend/.env
-              echo "L5_SWAGGER_CONST_HOST=http://$SERVER_IP:8000/api"   >> backend/.env
-              echo "SESSION_DRIVER=database"                             >> backend/.env
-              echo "SESSION_LIFETIME=120"                                >> backend/.env
-              echo "SESSION_ENCRYPT=false"                               >> backend/.env
-              echo "QUEUE_CONNECTION=database"                           >> backend/.env
-              echo "FILESYSTEM_DISK=local"                               >> backend/.env
-              echo "BROADCAST_CONNECTION=log"                            >> backend/.env
-              echo "LOG_CHANNEL=stack"                                   >> backend/.env
-              echo "LOG_LEVEL=error"                                     >> backend/.env
-            fi
-
-            # Build and start (keeps existing volumes on re-deploy)
-            sudo docker compose -f docker-compose.prod.yml up -d --build --remove-orphans
-            sudo docker image prune -f
-
+            docker compose -f docker-compose.prod.yml pull
+            docker compose -f docker-compose.prod.yml up -d --remove-orphans
+            docker image prune -f
             echo "Deployed at $(date)"
-            echo "API : http://$(curl -s ifconfig.me):8000/api/v1"
-            echo "App : http://$(curl -s ifconfig.me):3000"
+
+        env:
+          APP_KEY:              ${{ secrets.APP_KEY }}
+          DB_PASSWORD:          ${{ secrets.DB_PASSWORD }}
+          NEXT_PUBLIC_API_URL:  ${{ secrets.NEXT_PUBLIC_API_URL }}
+          NEXT_PUBLIC_APP_URL:  ${{ secrets.NEXT_PUBLIC_APP_URL }}
+          EC2_HOST:             ${{ secrets.EC2_HOST }}
