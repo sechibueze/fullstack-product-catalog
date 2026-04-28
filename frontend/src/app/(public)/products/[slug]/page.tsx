@@ -87,7 +87,6 @@ export async function generateMetadata({
 export default async function ProductDetailPage({ params }: ProductPageProps) {
   const { slug } = await params;
   const product = await getProduct(slug);
-  console.log('Fetched product:', product); // Debug log
   // handle unpublished or missing slugs
   if (!product || !product.isPublished) {
     notFound();
