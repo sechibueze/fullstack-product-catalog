@@ -36,7 +36,8 @@ setup:
 
 fresh:
 	$(COMPOSE_PROD) down -v --remove-orphans
-	$(COMPOSE_PROD) up -d --build
+	$(COMPOSE_PROD) pull
+	$(COMPOSE_PROD) up -d
 	@$(MAKE) _wait-prod
 	@echo ""
 	@echo "  Backend API : http://localhost:8000/api/v1"
@@ -44,14 +45,16 @@ fresh:
 	@echo "  Frontend    : http://localhost:3000"
 
 up:
-	$(COMPOSE_PROD) up -d --build
+	$(COMPOSE_PROD) pull
+	$(COMPOSE_PROD) up -d
 
 down:
 	$(COMPOSE_PROD) down
 
 restart:
 	$(COMPOSE_PROD) down --remove-orphans
-	$(COMPOSE_PROD) up -d --build
+	$(COMPOSE_PROD) pull
+	$(COMPOSE_PROD) up -d
 
 seed:
 	$(COMPOSE_PROD) exec backend php artisan migrate --seed --force
